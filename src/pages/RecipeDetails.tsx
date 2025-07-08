@@ -1,9 +1,10 @@
 
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Clock, Users, Star, Heart, ShoppingCart, ChefHat, ArrowLeft } from 'lucide-react';
+import { Clock, Users, Star, Heart, ShoppingCart, ChefHat, ArrowLeft, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import { useRecipeStore } from '@/hooks/useRecipeStore';
 import { useToast } from '@/hooks/use-toast';
 import Navigation from '@/components/Navigation';
@@ -11,11 +12,11 @@ import Navigation from '@/components/Navigation';
 const RecipeDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { recipes, user, toggleFavorite, addToShoppingList } = useRecipeStore();
+  const { user, toggleFavorite, addToShoppingList, getRecipeById } = useRecipeStore();
   const { toast } = useToast();
   const [checkedIngredients, setCheckedIngredients] = useState<string[]>([]);
 
-  const recipe = recipes.find(r => r.id === id);
+  const recipe = getRecipeById(id || '');
 
   if (!recipe) {
     return (
@@ -94,15 +95,22 @@ const RecipeDetails = () => {
                 <Heart className={`w-5 h-5 ${isFavorited ? 'fill-current' : ''}`} />
               </Button>
             </div>
-            <div className="absolute bottom-4 left-4">
-              <span className="bg-peach-500 text-white px-4 py-2 rounded-full text-sm font-medium">
+            <div className="absolute bottom-4 left-4 flex gap-2">
+              <Badge className="bg-peach-500 hover:bg-peach-600 text-white">
                 {recipe.category}
-              </span>
+              </Badge>
+              <Badge variant="secondary" className="bg-white/90 text-gray-700">
+                <Tag className="w-3 h-3 mr-1" />
+                {recipe.difficulty}
+              </Badge>
             </div>
           </div>
           
           <div className="p-6">
             <h1 className="text-3xl font-bold mb-4">{recipe.title}</h1>
+            {recipe.authorId && (
+              <p className="text-muted-foreground mb-4">by {recipe.authorId}</p>
+            )}
             
             {/* Recipe Meta */}
             <div className="flex items-center gap-6 mb-6">
