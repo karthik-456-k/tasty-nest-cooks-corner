@@ -5,9 +5,15 @@ import Navigation from '@/components/Navigation';
 import HeroSection from '@/components/HeroSection';
 import CategoryCard from '@/components/CategoryCard';
 import RecipeCard from '@/components/RecipeCard';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Search } from 'lucide-react';
+import { useRecipeStore } from '@/hooks/useRecipeStore';
 
 const Index = () => {
-  const [favoriteRecipes, setFavoriteRecipes] = useState<string[]>([]);
+  const { recipes, user, toggleFavorite } = useRecipeStore();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
 
   const categories = [
     { icon: Coffee, title: 'Breakfast', count: 145, gradient: 'bg-gradient-to-br from-amber-400 to-orange-500' },
@@ -18,51 +24,22 @@ const Index = () => {
     { icon: Wine, title: 'Drinks', count: 89, gradient: 'bg-gradient-to-br from-mint-400 to-emerald-500' },
   ];
 
-  const featuredRecipes = [
-    {
-      id: '1',
-      title: 'Creamy Mushroom Risotto with Fresh Herbs',
-      image: 'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?auto=format&fit=crop&w=600&q=80',
-      cookTime: '35 min',
-      servings: 4,
-      rating: 4.8,
-      category: 'Dinner'
-    },
-    {
-      id: '2',
-      title: 'Fresh Berry Smoothie Bowl',
-      image: 'https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?auto=format&fit=crop&w=600&q=80',
-      cookTime: '10 min',
-      servings: 2,
-      rating: 4.6,
-      category: 'Breakfast'
-    },
-    {
-      id: '3',
-      title: 'Grilled Salmon with Lemon Butter',
-      image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80',
-      cookTime: '25 min',
-      servings: 3,
-      rating: 4.9,
-      category: 'Lunch'
-    },
-    {
-      id: '4',
-      title: 'Chocolate Chip Cookies',
-      image: 'https://images.unsplash.com/photo-1721322800607-8c38375eef04?auto=format&fit=crop&w=600&q=80',
-      cookTime: '20 min',
-      servings: 12,
-      rating: 4.7,
-      category: 'Dessert'
-    }
-  ];
+  const categoryButtons = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Desserts', 'Snacks', 'Drinks'];
+
+  const filteredRecipes = recipes.filter(recipe => {
+    const matchesSearch = recipe.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         recipe.ingredients.some(ing => ing.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesCategory = selectedCategory === 'All' || recipe.category === selectedCategory;
+    
+    return matchesSearch && matchesCategory;
+  });
 
   const handleFavorite = (recipeId: string) => {
-    setFavoriteRecipes(prev => 
-      prev.includes(recipeId) 
-        ? prev.filter(id => id !== recipeId)
-        : [...prev, recipeId]
-    );
+    toggleFavorite(recipeId);
+  };
+
+  const handleCategoryClick = (category: string) => {
+    setSelectedCategory(category);
   };
 
   return (
@@ -72,8 +49,44 @@ const Index = () => {
       <main>
         <HeroSection />
         
+        {/* Search and Filter Section */}
+        <section className="py-8 bg-gradient-to-b from-transparent to-cream-50/50">
+          <div className="container mx-auto px-4">
+            {/* Search Bar */}
+            <div className="max-w-2xl mx-auto mb-8">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+                <Input
+                  placeholder="Search recipes by name or ingredient..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-12 pr-4 py-3 text-lg bg-white border-2 border-cream-200 focus:border-peach-300 rounded-full shadow-sm"
+                />
+              </div>
+            </div>
+
+            {/* Category Filter Buttons */}
+            <div className="flex flex-wrap justify-center gap-3 mb-8">
+              {categoryButtons.map(category => (
+                <Button
+                  key={category}
+                  variant={selectedCategory === category ? "default" : "outline"}
+                  onClick={() => handleCategoryClick(category)}
+                  className={`rounded-full px-6 py-2 transition-all ${
+                    selectedCategory === category 
+                      ? 'bg-peach-500 hover:bg-peach-600 text-white shadow-lg' 
+                      : 'hover:bg-peach-50 hover:border-peach-300 border-2'
+                  }`}
+                >
+                  {category}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* Categories Section */}
-        <section className="py-16 bg-gradient-to-b from-transparent to-cream-50/50">
+        <section className="py-16 bg-gradient-to-b from-cream-50/50 to-transparent">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold mb-4">
@@ -87,7 +100,10 @@ const Index = () => {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 lg:gap-6">
               {categories.map((category, index) => (
                 <div key={category.title} className="animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
-                  <CategoryCard {...category} />
+                  <CategoryCard 
+                    {...category} 
+                    onClick={() => handleCategoryClick(category.title)}
+                  />
                 </div>
               ))}
             </div>
@@ -100,25 +116,46 @@ const Index = () => {
             <div className="flex justify-between items-center mb-12">
               <div>
                 <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                  Today's Featured Recipes
+                  {selectedCategory === 'All' ? 'All Recipes' : `${selectedCategory} Recipes`}
                 </h2>
                 <p className="text-muted-foreground text-lg">
-                  Hand-picked by our community of food lovers
+                  {searchQuery ? `Results for "${searchQuery}"` : 'Discover amazing recipes from our community'}
                 </p>
               </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {featuredRecipes.map((recipe, index) => (
-                <div key={recipe.id} className="animate-scale-in" style={{ animationDelay: `${index * 150}ms` }}>
-                  <RecipeCard
-                    {...recipe}
-                    isFavorited={favoriteRecipes.includes(recipe.id)}
-                    onFavorite={handleFavorite}
-                  />
+            {filteredRecipes.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredRecipes.map((recipe, index) => (
+                  <div key={recipe.id} className="animate-scale-in" style={{ animationDelay: `${index * 100}ms` }}>
+                    <RecipeCard
+                      {...recipe}
+                      isFavorited={user.favoriteRecipes.includes(recipe.id)}
+                      onFavorite={handleFavorite}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="w-24 h-24 bg-cream-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Search className="w-12 h-12 text-cream-400" />
                 </div>
-              ))}
-            </div>
+                <h3 className="text-xl font-semibold mb-2">No recipes found</h3>
+                <p className="text-muted-foreground mb-4">
+                  Try adjusting your search terms or browse different categories
+                </p>
+                <Button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedCategory('All');
+                  }}
+                  className="bg-peach-500 hover:bg-peach-600 text-white rounded-full"
+                >
+                  Clear Filters
+                </Button>
+              </div>
+            )}
           </div>
         </section>
 
@@ -127,7 +164,7 @@ const Index = () => {
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
               <div className="animate-fade-in">
-                <div className="text-3xl md:text-4xl font-bold text-peach-600 mb-2">1,280+</div>
+                <div className="text-3xl md:text-4xl font-bold text-peach-600 mb-2">{recipes.length}+</div>
                 <div className="text-muted-foreground font-medium">Recipes</div>
               </div>
               <div className="animate-fade-in" style={{ animationDelay: '100ms' }}>

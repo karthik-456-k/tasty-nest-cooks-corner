@@ -1,6 +1,7 @@
 
 import { Heart, Clock, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 interface RecipeCardProps {
   id: string;
@@ -25,8 +26,17 @@ const RecipeCard = ({
   isFavorited = false,
   onFavorite
 }: RecipeCardProps) => {
+  const navigate = useNavigate();
+
+  const handleCardClick = () => {
+    navigate(`/recipe/${id}`);
+  };
+
   return (
-    <div className="bg-card rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 hover-scale group">
+    <div 
+      className="bg-card rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 hover-scale group cursor-pointer"
+      onClick={handleCardClick}
+    >
       {/* Image */}
       <div className="relative h-48 overflow-hidden">
         <img
