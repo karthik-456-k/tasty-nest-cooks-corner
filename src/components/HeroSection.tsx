@@ -1,6 +1,7 @@
 
 import { ChefHat, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 
 const HeroSection = () => {
   return (
@@ -31,9 +32,11 @@ const HeroSection = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-            <Button size="lg" className="bg-peach-500 hover:bg-peach-600 text-white px-8 py-3 rounded-full font-semibold transition-all hover-scale">
-              <ChefHat className="w-5 h-5 mr-2" />
-              Explore Recipes
+            <Button asChild size="lg" className="bg-peach-500 hover:bg-peach-600 text-white px-8 py-3 rounded-full font-semibold transition-all hover-scale">
+              <Link to="/explore">
+                <ChefHat className="w-5 h-5 mr-2" />
+                Explore Recipes
+              </Link>
             </Button>
             <Button variant="outline" size="lg" className="border-2 border-peach-300 text-peach-600 hover:bg-peach-50 px-8 py-3 rounded-full font-semibold">
               Create Recipe
