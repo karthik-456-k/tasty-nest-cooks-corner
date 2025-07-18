@@ -1,503 +1,467 @@
-import { useState, useEffect, useMemo } from 'react';
+import { create } from 'zustand';
 import { Recipe, User, ShoppingListItem } from '@/types/recipe';
 
-// Fuzzy matching function for recipe titles
-const calculateSimilarity = (str1: string, str2: string): number => {
-  const longer = str1.length > str2.length ? str1 : str2;
-  const shorter = str1.length > str2.length ? str2 : str1;
-  const editDistance = getEditDistance(longer, shorter);
-  return (longer.length - editDistance) / longer.length;
+const initialRecipes: Recipe[] = [
+  {
+    id: '1',
+    title: 'Classic Margherita Pizza',
+    image: '/images/margherita-pizza.jpg',
+    cookTime: '20 mins',
+    servings: 4,
+    rating: 4.5,
+    category: 'Lunch',
+    difficulty: 'Easy',
+    ingredients: [
+      { id: '1', name: 'Pizza dough', amount: '1', unit: 'lb' },
+      { id: '2', name: 'Tomato sauce', amount: '1', unit: 'cup' },
+      { id: '3', name: 'Fresh mozzarella', amount: '8', unit: 'oz' },
+      { id: '4', name: 'Fresh basil', amount: '1/4', unit: 'cup' },
+      { id: '5', name: 'Olive oil', amount: '2', unit: 'tbsp' },
+    ],
+    instructions: [
+      { id: '1', step: 1, description: 'Preheat oven to 450°F.' },
+      { id: '2', step: 2, description: 'Roll out pizza dough.' },
+      { id: '3', step: 3, description: 'Spread tomato sauce over dough.' },
+      { id: '4', step: 4, description: 'Add mozzarella and basil.' },
+      { id: '5', step: 5, description: 'Drizzle with olive oil.' },
+      { id: '6', step: 6, description: 'Bake for 12-15 minutes.' },
+    ],
+  },
+  {
+    id: '2',
+    title: 'Spicy Chicken Tacos',
+    image: '/images/spicy-chicken-tacos.jpg',
+    cookTime: '30 mins',
+    servings: 6,
+    rating: 4.2,
+    category: 'Dinner',
+    difficulty: 'Medium',
+    ingredients: [
+      { id: '6', name: 'Chicken breast', amount: '1.5', unit: 'lb' },
+      { id: '7', name: 'Taco seasoning', amount: '2', unit: 'tbsp' },
+      { id: '8', name: 'Tortillas', amount: '12' },
+      { id: '9', name: 'Salsa', amount: '1', unit: 'cup' },
+      { id: '10', name: 'Sour cream', amount: '1/2', unit: 'cup' },
+      { id: '11', name: 'Shredded cheese', amount: '1', unit: 'cup' },
+    ],
+    instructions: [
+      { id: '7', step: 1, description: 'Cut chicken into small pieces.' },
+      { id: '8', step: 2, description: 'Cook chicken with taco seasoning.' },
+      { id: '9', step: 3, description: 'Warm tortillas.' },
+      { id: '10', step: 4, description: 'Fill tortillas with chicken, salsa, sour cream, and cheese.' },
+    ],
+  },
+  {
+    id: '3',
+    title: 'Chocolate Chip Cookies',
+    image: '/images/chocolate-chip-cookies.jpg',
+    cookTime: '25 mins',
+    servings: 24,
+    rating: 4.8,
+    category: 'Desserts',
+    difficulty: 'Easy',
+    ingredients: [
+      { id: '12', name: 'All-purpose flour', amount: '3', unit: 'cups' },
+      { id: '13', name: 'Butter', amount: '1', unit: 'cup' },
+      { id: '14', name: 'Sugar', amount: '1', unit: 'cup' },
+      { id: '15', name: 'Brown sugar', amount: '1', unit: 'cup' },
+      { id: '16', name: 'Eggs', amount: '2' },
+      { id: '17', name: 'Vanilla extract', amount: '2', unit: 'tsp' },
+      { id: '18', name: 'Chocolate chips', amount: '2', unit: 'cups' },
+    ],
+    instructions: [
+      { id: '11', step: 1, description: 'Preheat oven to 375°F.' },
+      { id: '12', step: 2, description: 'Cream together butter, sugar, and brown sugar.' },
+      { id: '13', step: 3, description: 'Beat in eggs and vanilla.' },
+      { id: '14', step: 4, description: 'Gradually add flour.' },
+      { id: '15', step: 5, description: 'Stir in chocolate chips.' },
+      { id: '16', step: 6, description: 'Drop by spoonfuls onto baking sheet.' },
+      { id: '17', step: 7, description: 'Bake for 10-12 minutes.' },
+    ],
+  },
+  {
+    id: '4',
+    title: 'Refreshing Summer Salad',
+    image: '/images/summer-salad.jpg',
+    cookTime: '15 mins',
+    servings: 4,
+    rating: 4.6,
+    category: 'Lunch',
+    difficulty: 'Easy',
+    ingredients: [
+      { id: '19', name: 'Mixed greens', amount: '8', unit: 'oz' },
+      { id: '20', name: 'Cherry tomatoes', amount: '1', unit: 'pint' },
+      { id: '21', name: 'Cucumber', amount: '1' },
+      { id: '22', name: 'Red onion', amount: '1/2' },
+      { id: '23', name: 'Feta cheese', amount: '4', unit: 'oz' },
+      { id: '24', name: 'Olive oil', amount: '3', unit: 'tbsp' },
+      { id: '25', name: 'Lemon juice', amount: '2', unit: 'tbsp' },
+    ],
+    instructions: [
+      { id: '18', step: 1, description: 'Combine mixed greens, tomatoes, cucumber, and red onion.' },
+      { id: '19', step: 2, description: 'Crumble feta cheese over the salad.' },
+      { id: '20', step: 3, description: 'Drizzle with olive oil and lemon juice.' },
+    ],
+  },
+  {
+    id: '5',
+    title: 'Hearty Beef Stew',
+    image: '/images/beef-stew.jpg',
+    cookTime: '120 mins',
+    servings: 6,
+    rating: 4.3,
+    category: 'Dinner',
+    difficulty: 'Medium',
+    ingredients: [
+      { id: '26', name: 'Beef chuck', amount: '2', unit: 'lb' },
+      { id: '27', name: 'Potatoes', amount: '3', unit: 'medium' },
+      { id: '28', name: 'Carrots', amount: '4' },
+      { id: '29', name: 'Celery', amount: '3', unit: 'stalks' },
+      { id: '30', name: 'Beef broth', amount: '6', unit: 'cups' },
+      { id: '31', name: 'Tomato paste', amount: '2', unit: 'tbsp' },
+      { id: '32', name: 'Bay leaf', amount: '1' },
+    ],
+    instructions: [
+      { id: '21', step: 1, description: 'Cut beef into 1-inch cubes.' },
+      { id: '22', step: 2, description: 'Brown beef in a large pot.' },
+      { id: '23', step: 3, description: 'Add potatoes, carrots, and celery.' },
+      { id: '24', step: 4, description: 'Pour in beef broth and tomato paste.' },
+      { id: '25', step: 5, description: 'Add bay leaf.' },
+      { id: '26', step: 6, description: 'Simmer for 2 hours.' },
+    ],
+  },
+  {
+    id: '6',
+    title: 'Quick Chicken Noodle Soup',
+    image: '/images/chicken-noodle-soup.jpg',
+    cookTime: '45 mins',
+    servings: 6,
+    rating: 4.4,
+    category: 'Lunch',
+    difficulty: 'Easy',
+    ingredients: [
+      { id: '33', name: 'Chicken breast', amount: '1', unit: 'lb' },
+      { id: '34', name: 'Egg noodles', amount: '8', unit: 'oz' },
+      { id: '35', name: 'Carrots', amount: '2' },
+      { id: '36', name: 'Celery', amount: '2', unit: 'stalks' },
+      { id: '37', name: 'Chicken broth', amount: '8', unit: 'cups' },
+      { id: '38', name: 'Onion', amount: '1/2' },
+    ],
+    instructions: [
+      { id: '27', step: 1, description: 'Boil chicken in chicken broth.' },
+      { id: '28', step: 2, description: 'Remove chicken and shred.' },
+      { id: '29', step: 3, description: 'Add noodles, carrots, celery, and onion to broth.' },
+      { id: '30', step: 4, description: 'Cook until noodles are tender.' },
+      { id: '31', step: 5, description: 'Add chicken back to soup.' },
+    ],
+  },
+  {
+    id: '7',
+    title: 'Blueberry Pancakes',
+    image: '/images/blueberry-pancakes.jpg',
+    cookTime: '20 mins',
+    servings: 4,
+    rating: 4.7,
+    category: 'Breakfast',
+    difficulty: 'Easy',
+    ingredients: [
+      { id: '39', name: 'All-purpose flour', amount: '1', unit: 'cup' },
+      { id: '40', name: 'Baking powder', amount: '2', unit: 'tsp' },
+      { id: '41', name: 'Sugar', amount: '2', unit: 'tbsp' },
+      { id: '42', name: 'Milk', amount: '1', unit: 'cup' },
+      { id: '43', name: 'Egg', amount: '1' },
+      { id: '44', name: 'Butter', amount: '2', unit: 'tbsp' },
+      { id: '45', name: 'Blueberries', amount: '1/2', unit: 'cup' },
+    ],
+    instructions: [
+      { id: '32', step: 1, description: 'Mix flour, baking powder, and sugar.' },
+      { id: '33', step: 2, description: 'Add milk and egg.' },
+      { id: '34', step: 3, description: 'Melt butter in a pan.' },
+      { id: '35', step: 4, description: 'Pour batter onto pan.' },
+      { id: '36', step: 5, description: 'Add blueberries.' },
+      { id: '37', step: 6, description: 'Cook until golden brown.' },
+    ],
+  },
+  {
+    id: '8',
+    title: 'Avocado Toast with Egg',
+    image: '/images/avocado-toast.jpg',
+    cookTime: '10 mins',
+    servings: 1,
+    rating: 4.6,
+    category: 'Breakfast',
+    difficulty: 'Easy',
+    ingredients: [
+      { id: '46', name: 'Bread', amount: '2', unit: 'slices' },
+      { id: '47', name: 'Avocado', amount: '1/2' },
+      { id: '48', name: 'Egg', amount: '1' },
+      { id: '49', name: 'Salt', amount: '1', unit: 'pinch' },
+      { id: '50', name: 'Pepper', amount: '1', unit: 'pinch' },
+    ],
+    instructions: [
+      { id: '38', step: 1, description: 'Toast bread.' },
+      { id: '39', step: 2, description: 'Mash avocado and spread on toast.' },
+      { id: '40', step: 3, description: 'Fry egg.' },
+      { id: '41', step: 4, description: 'Place egg on avocado toast.' },
+      { id: '42', step: 5, description: 'Add salt and pepper.' },
+    ],
+  },
+  {
+    id: '9',
+    title: 'Mango Smoothie',
+    image: '/images/mango-smoothie.jpg',
+    cookTime: '5 mins',
+    servings: 1,
+    rating: 4.5,
+    category: 'Drinks',
+    difficulty: 'Easy',
+    ingredients: [
+      { id: '51', name: 'Mango', amount: '1' },
+      { id: '52', name: 'Yogurt', amount: '1', unit: 'cup' },
+      { id: '53', name: 'Milk', amount: '1/2', unit: 'cup' },
+      { id: '54', name: 'Honey', amount: '1', unit: 'tbsp' },
+    ],
+    instructions: [
+      { id: '43', step: 1, description: 'Peel and chop mango.' },
+      { id: '44', step: 2, description: 'Combine mango, yogurt, milk, and honey in a blender.' },
+      { id: '45', step: 3, description: 'Blend until smooth.' },
+    ],
+  },
+  {
+    id: '10',
+    title: 'Iced Coffee',
+    image: '/images/iced-coffee.jpg',
+    cookTime: '5 mins',
+    servings: 1,
+    rating: 4.3,
+    category: 'Drinks',
+    difficulty: 'Easy',
+    ingredients: [
+      { id: '55', name: 'Coffee', amount: '1', unit: 'cup' },
+      { id: '56', name: 'Ice', amount: '1', unit: 'cup' },
+      { id: '57', name: 'Milk', amount: '1/4', unit: 'cup' },
+      { id: '58', name: 'Sugar', amount: '1', unit: 'tbsp' },
+    ],
+    instructions: [
+      { id: '46', step: 1, description: 'Brew coffee.' },
+      { id: '47', step: 2, description: 'Let coffee cool.' },
+      { id: '48', step: 3, description: 'Fill glass with ice.' },
+      { id: '49', step: 4, description: 'Pour coffee over ice.' },
+      { id: '50', step: 5, description: 'Add milk and sugar.' },
+    ],
+  },
+];
+
+const initialUser: User = {
+  id: 'user-1',
+  name: 'Chef Lily',
+  bio: 'Passionate about creating delicious and healthy recipes for everyone to enjoy.',
+  avatar: '/images/user-avatar.png',
+  favoriteRecipes: ['3', '4', '7'],
+  myRecipes: ['1', '2', '5', '6', '8', '9', '10'],
 };
 
-const getEditDistance = (str1: string, str2: string): number => {
-  const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
+const initialShoppingList: ShoppingListItem[] = [
+  {
+    id: 'sli-1',
+    name: 'Pizza dough',
+    amount: '1',
+    unit: 'lb',
+    checked: false,
+    recipeId: '1',
+    recipeName: 'Classic Margherita Pizza',
+  },
+  {
+    id: 'sli-2',
+    name: 'Fresh mozzarella',
+    amount: '8',
+    unit: 'oz',
+    checked: true,
+    recipeId: '1',
+    recipeName: 'Classic Margherita Pizza',
+  },
+  {
+    id: 'sli-3',
+    name: 'Chicken breast',
+    amount: '1.5',
+    unit: 'lb',
+    checked: false,
+    recipeId: '2',
+    recipeName: 'Spicy Chicken Tacos',
+  },
+];
+
+interface RecipeStore {
+  recipes: Recipe[];
+  user: User;
+  shoppingListItems: ShoppingListItem[];
+  currentPage: number;
+  recipesPerPage: number;
+  searchQuery: string;
+  selectedCategory: string;
+  sortBy: 'rating' | 'time' | 'difficulty';
+  duplicatesRemoved: number;
   
-  for (let i = 0; i <= str1.length; i++) matrix[0][i] = i;
-  for (let j = 0; j <= str2.length; j++) matrix[j][0] = j;
+  addRecipe: (recipe: Recipe) => void;
+  updateRecipe: (recipe: Recipe) => void;
+  deleteRecipe: (recipeId: string) => void;
   
-  for (let j = 1; j <= str2.length; j++) {
-    for (let i = 1; i <= str1.length; i++) {
-      const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
-      matrix[j][i] = Math.min(
-        matrix[j][i - 1] + 1,
-        matrix[j - 1][i] + 1,
-        matrix[j - 1][i - 1] + indicator
-      );
+  updateUser: (userData: Partial<User>) => void;
+  
+  addShoppingListItem: (item: ShoppingListItem) => void;
+  updateShoppingListItem: (itemId: string, updates: Partial<ShoppingListItem>) => void;
+  deleteShoppingListItem: (itemId: string) => void;
+  
+  toggleFavorite: (recipeId: string) => void;
+  
+  setCurrentPage: (page: number) => void;
+  setRecipesPerPage: (perPage: number) => void;
+  setSearchQuery: (query: string) => void;
+  setSelectedCategory: (category: string) => void;
+  setSortBy: (sortBy: 'rating' | 'time' | 'difficulty') => void;
+  initializeRecipes: () => void;
+}
+
+const isDuplicateRecipe = (recipe: Recipe, existingRecipes: Recipe[]): boolean => {
+  return existingRecipes.some(existing => {
+    // Check for exact title match
+    if (existing.title.toLowerCase() === recipe.title.toLowerCase()) {
+      return true;
     }
-  }
-  
-  return matrix[str2.length][str1.length];
-};
-
-// Check if two recipes are duplicates
-const isDuplicateRecipe = (recipe1: Recipe, recipe2: Recipe): boolean => {
-  // Title similarity check (80% threshold)
-  const titleSimilarity = calculateSimilarity(
-    recipe1.title.toLowerCase().trim(),
-    recipe2.title.toLowerCase().trim()
-  );
-  
-  if (titleSimilarity > 0.8) return true;
-  
-  // Ingredient similarity check
-  const ingredients1 = recipe1.ingredients.map(ing => ing.name.toLowerCase()).sort();
-  const ingredients2 = recipe2.ingredients.map(ing => ing.name.toLowerCase()).sort();
-  
-  if (ingredients1.length === ingredients2.length) {
-    const matchingIngredients = ingredients1.filter(ing => ingredients2.includes(ing));
-    const ingredientSimilarity = matchingIngredients.length / ingredients1.length;
     
-    if (ingredientSimilarity > 0.85) return true;
-  }
-  
-  return false;
-};
-
-// Generate a comprehensive dataset of unique recipes
-const generateUniqueRecipes = (): Recipe[] => {
-  const categories = ['Breakfast', 'Lunch', 'Dinner', 'Desserts', 'Snacks', 'Drinks', 'Salads', 'Soups', 'Vegan', 'Kids', 'Quick Meals'] as const;
-  const difficulties = ['Easy', 'Medium', 'Hard'] as const;
-  const authors = ['Chef Maria', 'Cook John', 'Baker Sarah', 'Chef Alex', 'Home Cook Lisa', 'Chef David', 'Baker Emma', 'Cook Tom'];
-  
-  const uniqueRecipeTemplates = [
-    // Breakfast (Enhanced variety)
-    { title: 'Classic Buttermilk Pancakes', category: 'Breakfast', cookTime: '15 min', image: 'https://images.unsplash.com/photo-1528207776546-365bb710ee93?auto=format&fit=crop&w=600&q=80', tags: ['sweet', 'fluffy'] },
-    { title: 'Avocado Toast Supreme', category: 'Breakfast', cookTime: '10 min', image: 'https://images.unsplash.com/photo-1541519227354-08fa5d50c44d?auto=format&fit=crop&w=600&q=80', tags: ['healthy', 'trendy'] },
-    { title: 'Steel Cut Oats Bowl', category: 'Breakfast', cookTime: '25 min', image: 'https://images.unsplash.com/photo-1571197119275-324837ba5ce7?auto=format&fit=crop&w=600&q=80', tags: ['nutritious', 'filling'] },
-    { title: 'French Toast Brioche', category: 'Breakfast', cookTime: '12 min', image: 'https://images.unsplash.com/photo-1484723091739-30a097e8f929?auto=format&fit=crop&w=600&q=80', tags: ['indulgent', 'weekend'] },
-    { title: 'Breakfast Burrito Bowl', category: 'Breakfast', cookTime: '18 min', image: 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=600&q=80', tags: ['protein-rich', 'mexican'] },
+    // Check for similar titles (fuzzy matching)
+    const similarity = calculateTitleSimilarity(existing.title, recipe.title);
+    if (similarity > 0.8) {
+      return true;
+    }
     
-    // Lunch (More diverse options)
-    { title: 'Mediterranean Quinoa Salad', category: 'Lunch', cookTime: '20 min', image: 'https://images.unsplash.com/photo-1551248429-40975aa4de74?auto=format&fit=crop&w=600&q=80', tags: ['mediterranean', 'grain-bowl'] },
-    { title: 'Panini Caprese Sandwich', category: 'Lunch', cookTime: '12 min', image: 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=600&q=80', tags: ['italian', 'pressed'] },
-    { title: 'Buddha Power Bowl', category: 'Lunch', cookTime: '25 min', image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=600&q=80', tags: ['plant-based', 'colorful'] },
-    { title: 'Chicken Caesar Wraps', category: 'Lunch', cookTime: '15 min', image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?auto=format&fit=crop&w=600&q=80', tags: ['handheld', 'classic'] },
-    { title: 'Asian Fusion Noodle Bowl', category: 'Lunch', cookTime: '22 min', image: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=600&q=80', tags: ['asian', 'umami'] },
+    // Check for similar ingredient combinations
+    const recipeIngredients = Array.isArray(recipe.ingredients) 
+      ? recipe.ingredients.map(ing => typeof ing === 'string' ? ing : ing.name)
+      : [];
+    const existingIngredients = Array.isArray(existing.ingredients)
+      ? existing.ingredients.map(ing => typeof ing === 'string' ? ing : ing.name)
+      : [];
     
-    // Dinner (Expanded variety)
-    { title: 'Spaghetti Aglio e Olio', category: 'Dinner', cookTime: '15 min', image: 'https://images.unsplash.com/photo-1621996346565-e3dbc353d2e5?auto=format&fit=crop&w=600&q=80', tags: ['italian', 'simple'] },
-    { title: 'Herb-Crusted Salmon', category: 'Dinner', cookTime: '28 min', image: 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=600&q=80', tags: ['omega-3', 'elegant'] },
-    { title: 'Korean Beef Bulgogi', category: 'Dinner', cookTime: '35 min', image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=600&q=80', tags: ['korean', 'marinated'] },
-    { title: 'Moroccan Tagine Chicken', category: 'Dinner', cookTime: '45 min', image: 'https://images.unsplash.com/photo-1574484284002-952d92456975?auto=format&fit=crop&w=600&q=80', tags: ['moroccan', 'aromatic'] },
-    { title: 'Thai Green Curry', category: 'Dinner', cookTime: '30 min', image: 'https://images.unsplash.com/photo-1455619452474-d2be8b1e70cd?auto=format&fit=crop&w=600&q=80', tags: ['thai', 'coconut'] },
+    const ingredientSimilarity = calculateIngredientSimilarity(recipeIngredients, existingIngredients);
+    if (ingredientSimilarity > 0.9) {
+      return true;
+    }
     
-    // Continue with more unique templates for other categories...
-    { title: 'Tiramisu Classico', category: 'Desserts', cookTime: '240 min', image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80', tags: ['italian', 'coffee'] },
-    { title: 'Fresh Berry Tart', category: 'Desserts', cookTime: '60 min', image: 'https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?auto=format&fit=crop&w=600&q=80', tags: ['seasonal', 'pastry'] },
-    { title: 'Salted Caramel Ice Cream', category: 'Desserts', cookTime: '180 min', image: 'https://images.unsplash.com/photo-1501443762994-82bd5dace89a?auto=format&fit=crop&w=600&q=80', tags: ['frozen', 'indulgent'] },
-    
-    // Add more unique recipes across all categories
-  ];
-
-  const recipes: Recipe[] = [];
-  const usedTitles = new Set<string>();
-  const duplicateCount = { total: 0 };
-
-  // Generate base recipes
-  uniqueRecipeTemplates.forEach((template, index) => {
-    const recipe: Recipe = {
-      id: (index + 1).toString(),
-      title: template.title,
-      image: template.image,
-      cookTime: template.cookTime,
-      servings: Math.floor(Math.random() * 6) + 2,
-      rating: Math.round((Math.random() * 2 + 3) * 10) / 10,
-      category: template.category as Recipe['category'],
-      difficulty: difficulties[Math.floor(Math.random() * difficulties.length)],
-      ingredients: generateUniqueIngredients(template.category, index),
-      instructions: generateUniqueInstructions(template.category, index),
-      authorId: authors[Math.floor(Math.random() * authors.length)],
-      createdAt: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000)
-    };
-    
-    recipes.push(recipe);
-    usedTitles.add(recipe.title.toLowerCase());
+    return false;
   });
-
-  // Generate additional variations ensuring uniqueness
-  let recipeId = uniqueRecipeTemplates.length + 1;
-  const targetCount = 1000;
-  
-  while (recipes.length < targetCount && recipeId < targetCount * 2) {
-    const template = uniqueRecipeTemplates[Math.floor(Math.random() * uniqueRecipeTemplates.length)];
-    const variationSuffix = getUniqueVariationSuffix(recipeId);
-    const newTitle = `${template.title} ${variationSuffix}`;
-    
-    // Check for duplicates
-    const titleKey = newTitle.toLowerCase();
-    if (usedTitles.has(titleKey)) {
-      duplicateCount.total++;
-      recipeId++;
-      continue;
-    }
-    
-    const newRecipe: Recipe = {
-      id: recipeId.toString(),
-      title: newTitle,
-      image: template.image,
-      cookTime: template.cookTime,
-      servings: Math.floor(Math.random() * 6) + 2,
-      rating: Math.round((Math.random() * 2 + 3) * 10) / 10,
-      category: template.category as Recipe['category'],
-      difficulty: difficulties[Math.floor(Math.random() * difficulties.length)],
-      ingredients: generateUniqueIngredients(template.category, recipeId),
-      instructions: generateUniqueInstructions(template.category, recipeId),
-      authorId: authors[Math.floor(Math.random() * authors.length)],
-      createdAt: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000)
-    };
-    
-    // Final duplicate check against existing recipes
-    const isDuplicate = recipes.some(existingRecipe => isDuplicateRecipe(newRecipe, existingRecipe));
-    
-    if (!isDuplicate) {
-      recipes.push(newRecipe);
-      usedTitles.add(titleKey);
-    } else {
-      duplicateCount.total++;
-    }
-    
-    recipeId++;
-  }
-  
-  console.log(`✅ Generated ${recipes.length} unique recipes (${duplicateCount.total} duplicates prevented)`);
-  return recipes;
 };
 
-const getUniqueVariationSuffix = (id: number): string => {
-  const suffixes = [
-    'Supreme', 'Deluxe', 'Classic', 'Gourmet', 'Special', 'Traditional', 'Modern', 'Fusion', 
-    'Spicy', 'Mild', 'Extra', 'Light', 'Rich', 'Creamy', 'Crispy', 'Rustic', 'Artisan',
-    'Homestyle', 'Restaurant Style', 'Signature', 'Premium', 'Ultimate', 'Perfect', 'Golden',
-    'Authentic', 'Original', 'Fresh', 'Zesty', 'Hearty', 'Comfort', 'Elevated', 'Twisted'
-  ];
-  return suffixes[id % suffixes.length];
+const calculateTitleSimilarity = (title1: string, title2: string): number => {
+  const words1 = title1.toLowerCase().split(' ');
+  const words2 = title2.toLowerCase().split(' ');
+  const commonWords = words1.filter(word => words2.includes(word));
+  return commonWords.length / Math.max(words1.length, words2.length);
 };
 
-const generateUniqueIngredients = (category: string, seed: number) => {
-  const ingredientSets = {
-    'Breakfast': [
-      ['eggs', 'milk', 'flour', 'butter', 'vanilla extract'],
-      ['oats', 'berries', 'honey', 'almonds', 'cinnamon'],
-      ['bread', 'avocado', 'lime', 'salt', 'pepper'],
-      ['yogurt', 'granola', 'banana', 'maple syrup', 'chia seeds']
-    ],
-    'Lunch': [
-      ['quinoa', 'cucumber', 'tomatoes', 'feta cheese', 'olive oil'],
-      ['chicken breast', 'lettuce', 'caesar dressing', 'parmesan', 'croutons'],
-      ['mixed greens', 'chickpeas', 'carrots', 'tahini', 'lemon juice'],
-      ['rice noodles', 'vegetables', 'soy sauce', 'ginger', 'garlic']
-    ],
-    'Dinner': [
-      ['pasta', 'garlic', 'olive oil', 'red pepper flakes', 'parsley'],
-      ['salmon fillet', 'herbs', 'lemon', 'asparagus', 'potatoes'],
-      ['beef', 'onions', 'bell peppers', 'soy sauce', 'sesame oil'],
-      ['chicken thighs', 'coconut milk', 'curry paste', 'vegetables', 'jasmine rice']
-    ],
-    'Desserts': ['sugar', 'flour', 'butter', 'vanilla', 'chocolate'],
-    'Snacks': ['nuts', 'dried fruit', 'seeds', 'honey', 'spices'],
-    'Drinks': ['water', 'ice', 'fruit', 'honey', 'mint'],
-    'Salads': ['greens', 'vegetables', 'dressing', 'nuts', 'cheese'],
-    'Soups': ['broth', 'vegetables', 'herbs', 'cream', 'seasoning'],
-    'Vegan': ['vegetables', 'grains', 'legumes', 'nuts', 'spices'],
-    'Kids': ['cheese', 'pasta', 'chicken', 'bread', 'milk'],
-    'Quick Meals': ['pasta', 'sauce', 'vegetables', 'protein', 'seasoning']
+const calculateIngredientSimilarity = (ingredients1: string[], ingredients2: string[]): number => {
+  if (ingredients1.length === 0 || ingredients2.length === 0) return 0;
+  const common = ingredients1.filter(ing => ingredients2.includes(ing));
+  return common.length / Math.max(ingredients1.length, ingredients2.length);
+};
+
+const generateRecipe = (id: string): Recipe => {
+  const randomRating = Math.random() * (5 - 3) + 3;
+  const categories = ['Breakfast', 'Lunch', 'Dinner', 'Desserts', 'Snacks', 'Drinks'];
+  const difficulties = ['Easy', 'Medium', 'Hard'];
+  
+  return {
+    id: id,
+    title: `Generated Recipe ${id}`,
+    image: `/images/recipe-${Math.floor(Math.random() * 6) + 1}.jpg`,
+    cookTime: `${Math.floor(Math.random() * 60) + 10} mins`,
+    servings: Math.floor(Math.random() * 4) + 1,
+    rating: parseFloat(randomRating.toFixed(1)),
+    category: categories[Math.floor(Math.random() * categories.length)] as 'Breakfast' | 'Lunch' | 'Dinner' | 'Desserts' | 'Snacks' | 'Drinks',
+    difficulty: difficulties[Math.floor(Math.random() * difficulties.length)] as 'Easy' | 'Medium' | 'Hard',
+    ingredients: Array.from({ length: Math.floor(Math.random() * 5) + 3 }, (_, i) => ({
+      id: `ing-${id}-${i}`,
+      name: `Ingredient ${i + 1}`,
+      amount: `${Math.floor(Math.random() * 10) + 1}`,
+      unit: 'oz',
+    })),
+    instructions: Array.from({ length: Math.floor(Math.random() * 5) + 3 }, (_, i) => ({
+      id: `inst-${id}-${i}`,
+      step: i + 1,
+      description: `Step ${i + 1}: Do something`,
+    })),
   };
-
-  const baseIngredients = ingredientSets[category as keyof typeof ingredientSets] || ingredientSets['Dinner'];
-  const selectedSet = baseIngredients[seed % baseIngredients.length];
-  
-  return selectedSet.map((name, index) => ({
-    id: `${seed}-${index}`,
-    name: name,
-    amount: (Math.random() * 3 + 0.5).toFixed(1),
-    unit: ['cup', 'tbsp', 'tsp', 'lb', 'oz', 'piece', 'clove', 'bunch'][Math.floor(Math.random() * 8)]
-  }));
 };
 
-const generateUniqueInstructions = (category: string, seed: number) => {
-  const instructionSets = {
-    'Breakfast': [
-      'Preheat your pan or griddle over medium heat.',
-      'Mix all dry ingredients in a large bowl.',
-      'Whisk wet ingredients in a separate bowl until smooth.',
-      'Combine wet and dry ingredients until just mixed.',
-      'Cook until bubbles form on surface, then flip.',
-      'Serve immediately while hot and fluffy.'
-    ],
-    'Lunch': [
-      'Prepare all fresh ingredients and wash thoroughly.',
-      'Cook grains or pasta according to package directions.',
-      'Prepare dressing by whisking all components together.',
-      'Combine all salad ingredients in a large bowl.',
-      'Toss with dressing just before serving.',
-      'Garnish with fresh herbs and serve chilled.'
-    ],
-    'Dinner': [
-      'Preheat oven to required temperature if needed.',
-      'Season protein with salt, pepper, and desired spices.',
-      'Heat oil in a large skillet over medium-high heat.',
-      'Cook protein until golden brown and cooked through.',
-      'Add vegetables and aromatics to the pan.',
-      'Finish cooking and let rest before serving.'
-    ],
-    'Desserts': [
-      'Preheat oven to the specified temperature.',
-      'Grease and flour a baking pan.',
-      'Cream together butter and sugar until light and fluffy.',
-      'Incorporate eggs one at a time, mixing well after each.',
-      'Gradually add dry ingredients to wet ingredients.',
-      'Bake until a toothpick comes out clean.'
-    ],
-    'Snacks': [
-      'Combine nuts, seeds, and dried fruit in a bowl.',
-      'Drizzle with honey and spices.',
-      'Mix well to coat evenly.',
-      'Spread on a baking sheet.',
-      'Bake until golden brown and fragrant.',
-      'Let cool completely before serving.'
-    ],
-    'Drinks': [
-      'Fill a glass with ice cubes.',
-      'Add fruit and herbs to the glass.',
-      'Pour liquid over ice and fruit.',
-      'Stir gently to combine flavors.',
-      'Garnish with a sprig of mint.',
-      'Serve immediately and enjoy.'
-    ],
-    'Salads': [
-      'Wash and chop all vegetables.',
-      'Combine greens and vegetables in a large bowl.',
-      'Prepare dressing by whisking ingredients together.',
-      'Drizzle dressing over salad.',
-      'Toss gently to coat.',
-      'Serve immediately or chill for later.'
-    ],
-    'Soups': [
-      'Sauté vegetables in a pot until softened.',
-      'Add broth and bring to a boil.',
-      'Simmer until vegetables are tender.',
-      'Stir in herbs and seasoning.',
-      'Blend until smooth if desired.',
-      'Serve hot with a dollop of cream.'
-    ],
-    'Vegan': [
-      'Prepare grains or legumes according to package directions.',
-      'Roast vegetables until tender and slightly caramelized.',
-      'Prepare sauce or dressing.',
-      'Combine grains, vegetables, and sauce in a bowl.',
-      'Toss gently to coat.',
-      'Garnish with nuts and spices.'
-    ],
-    'Kids': [
-      'Cook pasta according to package directions.',
-      'Melt cheese in a saucepan.',
-      'Stir in milk until smooth.',
-      'Combine pasta and cheese sauce.',
-      'Mix well to coat.',
-      'Serve warm and enjoy.'
-    ],
-    'Quick Meals': [
-      'Cook pasta according to package directions.',
-      'Heat sauce in a saucepan.',
-      'Add vegetables and protein to the sauce.',
-      'Simmer until heated through.',
-      'Combine pasta and sauce.',
-      'Serve immediately and enjoy.'
-    ]
-  };
-
-  const steps = instructionSets[category as keyof typeof instructionSets] || instructionSets['Dinner'];
-  
-  return steps.map((description, index) => ({
-    id: `${seed}-step-${index}`,
-    step: index + 1,
-    description,
-    duration: index === steps.length - 1 ? undefined : `${Math.floor(Math.random() * 10) + 5} min`
-  }));
+const generateRecipes = (): Recipe[] => {
+  return Array.from({ length: 5 }, (_, i) => generateRecipe(`gen-${i + 1}`));
 };
 
-const SAMPLE_USER: User = {
-  id: '1',
-  name: 'Sarah Johnson',
-  bio: 'Home cook passionate about healthy and delicious meals. Love experimenting with new flavors!',
-  avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?auto=format&fit=crop&w=150&q=80',
-  favoriteRecipes: [],
-  myRecipes: []
-};
-
-export const useRecipeStore = () => {
-  const [allRecipes] = useState<Recipe[]>(() => generateUniqueRecipes());
-  const [user, setUser] = useState<User>(SAMPLE_USER);
-  const [shoppingList, setShoppingList] = useState<ShoppingListItem[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [sortBy, setSortBy] = useState<'rating' | 'time' | 'difficulty'>('rating');
+export const useRecipeStore = create<RecipeStore>((set, get) => ({
+  recipes: initialRecipes,
+  user: initialUser,
+  shoppingListItems: initialShoppingList,
+  currentPage: 1,
+  recipesPerPage: 8,
+  searchQuery: '',
+  selectedCategory: 'All',
+  sortBy: 'rating',
+  duplicatesRemoved: 0,
   
-  const recipesPerPage = 24;
-
-  useEffect(() => {
-    const savedUser = localStorage.getItem('tastyNest_user');
-    const savedShoppingList = localStorage.getItem('tastyNest_shoppingList');
-
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+  addRecipe: (recipe) => set(state => ({ recipes: [...state.recipes, recipe] })),
+  updateRecipe: (recipe) => set(state => ({
+    recipes: state.recipes.map(r => r.id === recipe.id ? recipe : r)
+  })),
+  deleteRecipe: (recipeId) => set(state => ({
+    recipes: state.recipes.filter(r => r.id !== recipeId)
+  })),
+  
+  updateUser: (userData) => set(state => ({
+    user: { ...state.user, ...userData }
+  })),
+  
+  addShoppingListItem: (item) => set(state => ({
+    shoppingListItems: [...state.shoppingListItems, item]
+  })),
+  updateShoppingListItem: (itemId, updates) => set(state => ({
+    shoppingListItems: state.shoppingListItems.map(item =>
+      item.id === itemId ? { ...item, ...updates } : item
+    )
+  })),
+  deleteShoppingListItem: (itemId) => set(state => ({
+    shoppingListItems: state.shoppingListItems.filter(item => item.id !== itemId)
+  })),
+  
+  toggleFavorite: (recipeId) => set(state => ({
+    user: {
+      ...state.user,
+      favoriteRecipes: state.user.favoriteRecipes.includes(recipeId)
+        ? state.user.favoriteRecipes.filter(id => id !== recipeId)
+        : [...state.user.favoriteRecipes, recipeId]
     }
-    if (savedShoppingList) {
-      setShoppingList(JSON.parse(savedShoppingList));
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('tastyNest_user', JSON.stringify(user));
-  }, [user]);
-
-  useEffect(() => {
-    localStorage.setItem('tastyNest_shoppingList', JSON.stringify(shoppingList));
-  }, [shoppingList]);
-
-  const filteredRecipes = useMemo(() => {
-    let filtered = allRecipes.filter(recipe => {
-      const matchesSearch = searchQuery === '' || 
-        recipe.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        recipe.ingredients.some(ing => ing.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        recipe.authorId?.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesCategory = selectedCategory === 'All' || recipe.category === selectedCategory;
-      
-      return matchesSearch && matchesCategory;
-    });
-
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'rating':
-          return b.rating - a.rating;
-        case 'time':
-          return parseInt(a.cookTime) - parseInt(b.cookTime);
-        case 'difficulty':
-          const difficultyOrder = { 'Easy': 1, 'Medium': 2, 'Hard': 3 };
-          return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
-        default:
-          return 0;
+  })),
+  
+  setCurrentPage: (page) => set({ currentPage: page }),
+  setRecipesPerPage: (perPage) => set({ recipesPerPage: perPage }),
+  setSearchQuery: (query) => set({ searchQuery: query }),
+  setSelectedCategory: (category) => set({ selectedCategory: category }),
+  setSortBy: (sortBy) => set({ sortBy: sortBy }),
+  initializeRecipes: () => {
+    const generatedRecipes = generateRecipes();
+    const uniqueRecipes: Recipe[] = [];
+    let duplicateCount = 0;
+    
+    generatedRecipes.forEach(recipe => {
+      if (!isDuplicateRecipe(recipe, uniqueRecipes)) {
+        uniqueRecipes.push(recipe);
+      } else {
+        duplicateCount++;
       }
     });
-
-    return filtered;
-  }, [allRecipes, searchQuery, selectedCategory, sortBy]);
-
-  const paginatedRecipes = useMemo(() => {
-    const startIndex = (currentPage - 1) * recipesPerPage;
-    return filteredRecipes.slice(startIndex, startIndex + recipesPerPage);
-  }, [filteredRecipes, currentPage, recipesPerPage]);
-
-  const totalPages = Math.ceil(filteredRecipes.length / recipesPerPage);
-
-  const addRecipe = (recipe: Omit<Recipe, 'id' | 'authorId' | 'createdAt'>) => {
-    // Check for duplicates before adding
-    const isDuplicate = allRecipes.some(existingRecipe => 
-      isDuplicateRecipe({ ...recipe, id: '', authorId: user.id, createdAt: new Date() } as Recipe, existingRecipe)
-    );
     
-    if (isDuplicate) {
-      throw new Error('Recipe already exists or is too similar to an existing recipe');
-    }
-    
-    const newRecipe: Recipe = {
-      ...recipe,
-      id: (allRecipes.length + 1).toString(),
-      authorId: user.id,
-      createdAt: new Date()
-    };
-    
-    setUser(prev => ({ ...prev, myRecipes: [...prev.myRecipes, newRecipe.id] }));
-    return newRecipe;
-  };
-
-  const toggleFavorite = (recipeId: string) => {
-    setUser(prev => ({
-      ...prev,
-      favoriteRecipes: prev.favoriteRecipes.includes(recipeId)
-        ? prev.favoriteRecipes.filter(id => id !== recipeId)
-        : [...prev.favoriteRecipes, recipeId]
-    }));
-  };
-
-  const addToShoppingList = (recipe: Recipe) => {
-    const newItems: ShoppingListItem[] = recipe.ingredients.map(ingredient => ({
-      id: `${recipe.id}-${ingredient.id}`,
-      name: ingredient.name,
-      amount: ingredient.amount,
-      unit: ingredient.unit,
-      checked: false,
-      recipeId: recipe.id,
-      recipeName: recipe.title
-    }));
-
-    setShoppingList(prev => {
-      const existingIds = prev.map(item => item.id);
-      const filteredNewItems = newItems.filter(item => !existingIds.includes(item.id));
-      return [...prev, ...filteredNewItems];
+    set({ 
+      recipes: uniqueRecipes,
+      duplicatesRemoved: duplicateCount
     });
-  };
-
-  const toggleShoppingListItem = (itemId: string) => {
-    setShoppingList(prev => 
-      prev.map(item => 
-        item.id === itemId ? { ...item, checked: !item.checked } : item
-      )
-    );
-  };
-
-  const clearShoppingList = () => {
-    setShoppingList([]);
-  };
-
-  const updateUser = (updates: Partial<User>) => {
-    setUser(prev => ({ ...prev, ...updates }));
-  };
-
-  const setSearch = (query: string) => {
-    setSearchQuery(query);
-    setCurrentPage(1); // Reset to first page when searching
-  };
-
-  const setCategory = (category: string) => {
-    setSelectedCategory(category);
-    setCurrentPage(1); // Reset to first page when filtering
-  };
-
-  const getRecipeById = (id: string) => {
-    return allRecipes.find(recipe => recipe.id === id);
-  };
-
-  const getRandomRecipe = () => {
-    return allRecipes[Math.floor(Math.random() * allRecipes.length)];
-  };
-
-  return {
-    recipes: paginatedRecipes,
-    allRecipes,
-    filteredRecipes,
-    user,
-    shoppingList,
-    currentPage,
-    totalPages,
-    searchQuery,
-    selectedCategory,
-    sortBy,
-    totalRecipes: allRecipes.length,
-    filteredCount: filteredRecipes.length,
-    addRecipe,
-    toggleFavorite,
-    addToShoppingList,
-    toggleShoppingListItem,
-    clearShoppingList,
-    updateUser,
-    setCurrentPage,
-    setSearch,
-    setCategory,
-    setSortBy,
-    getRecipeById,
-    getRandomRecipe
-  };
-};
+  }
+}));
