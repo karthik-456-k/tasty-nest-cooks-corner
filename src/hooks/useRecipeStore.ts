@@ -365,44 +365,82 @@ const calculateIngredientSimilarity = (ingredients1: string[], ingredients2: str
   return common.length / Math.max(ingredients1.length, ingredients2.length);
 };
 
-const generateRecipe = (id: string): Recipe => {
-  const randomRating = Math.random() * (5 - 3) + 3;
-  const categories = ['Breakfast', 'Lunch', 'Dinner', 'Desserts', 'Snacks', 'Drinks'];
-  const difficulties = ['Easy', 'Medium', 'Hard'];
-  
-  return {
-    id: id,
-    title: `Generated Recipe ${id}`,
-    image: `/images/recipe-${Math.floor(Math.random() * 6) + 1}.jpg`,
-    cookTime: `${Math.floor(Math.random() * 60) + 10} mins`,
-    servings: Math.floor(Math.random() * 4) + 1,
-    rating: parseFloat(randomRating.toFixed(1)),
-    category: categories[Math.floor(Math.random() * categories.length)] as 'Breakfast' | 'Lunch' | 'Dinner' | 'Desserts' | 'Snacks' | 'Drinks',
-    difficulty: difficulties[Math.floor(Math.random() * difficulties.length)] as 'Easy' | 'Medium' | 'Hard',
-    ingredients: Array.from({ length: Math.floor(Math.random() * 5) + 3 }, (_, i) => ({
-      id: `ing-${id}-${i}`,
-      name: `Ingredient ${i + 1}`,
-      amount: `${Math.floor(Math.random() * 10) + 1}`,
-      unit: 'oz',
-    })),
-    instructions: Array.from({ length: Math.floor(Math.random() * 5) + 3 }, (_, i) => ({
-      id: `inst-${id}-${i}`,
-      step: i + 1,
-      description: `Step ${i + 1}: Do something`,
-    })),
+const generateUniqueIngredients = (category: string, count: number): any[] => {
+  const baseIngredients = {
+    'Breakfast': ['eggs', 'milk', 'butter', 'flour', 'sugar', 'vanilla', 'oats', 'berries', 'yogurt', 'honey'],
+    'Lunch': ['chicken', 'rice', 'vegetables', 'olive oil', 'garlic', 'onion', 'tomatoes', 'cheese', 'herbs', 'bread'],
+    'Dinner': ['beef', 'pork', 'salmon', 'pasta', 'potatoes', 'carrots', 'broth', 'wine', 'spices', 'cream'],
+    'Desserts': ['chocolate', 'vanilla', 'sugar', 'butter', 'eggs', 'flour', 'cream', 'strawberries', 'nuts', 'caramel'],
+    'Snacks': ['nuts', 'crackers', 'cheese', 'fruit', 'popcorn', 'pretzels', 'hummus', 'vegetables', 'dip', 'chips'],
+    'Drinks': ['water', 'ice', 'lemon', 'mint', 'tea', 'coffee', 'milk', 'sugar', 'fruit juice', 'soda'],
+    'Vegan': ['tofu', 'beans', 'quinoa', 'vegetables', 'nuts', 'seeds', 'coconut milk', 'nutritional yeast', 'tahini', 'maple syrup'],
+    'Kids': ['pasta', 'cheese', 'chicken nuggets', 'apple slices', 'carrots', 'crackers', 'peanut butter', 'jelly', 'milk', 'cookies'],
+    'Quick Meals': ['pre-cooked chicken', 'frozen vegetables', 'instant rice', 'canned beans', 'pasta', 'eggs', 'bread', 'cheese', 'salad mix', 'dressing']
   };
+  
+  const categoryIngredients = baseIngredients[category as keyof typeof baseIngredients] || baseIngredients['Lunch'];
+  const selectedIngredients = new Set<string>();
+  
+  while (selectedIngredients.size < count && selectedIngredients.size < categoryIngredients.length) {
+    const randomIngredient = categoryIngredients[Math.floor(Math.random() * categoryIngredients.length)];
+    selectedIngredients.add(randomIngredient);
+  }
+  
+  // Convert Set to Array before using map
+  return Array.from(selectedIngredients).map((name, index) => ({
+    id: `ing-${Date.now()}-${index}`,
+    name,
+    amount: `${Math.floor(Math.random() * 3) + 1}`,
+    unit: ['cup', 'tbsp', 'tsp', 'oz', 'lb', 'piece'][Math.floor(Math.random() * 6)]
+  }));
 };
 
-const generateRecipes = (): Recipe[] => {
-  return Array.from({ length: 5 }, (_, i) => generateRecipe(`gen-${i + 1}`));
+const generateUniqueRecipes = (): Recipe[] => {
+  const categories: Array<'Breakfast' | 'Lunch' | 'Dinner' | 'Desserts' | 'Snacks' | 'Drinks' | 'Vegan' | 'Kids' | 'Quick Meals'> = [
+    'Breakfast', 'Lunch', 'Dinner', 'Desserts', 'Snacks', 'Drinks', 'Vegan', 'Kids', 'Quick Meals'
+  ];
+  
+  const difficulties: Array<'Easy' | 'Medium' | 'Hard'> = ['Easy', 'Medium', 'Hard'];
+  const recipes: Recipe[] = [];
+  
+  categories.forEach(category => {
+    const recipesPerCategory = category === 'Lunch' || category === 'Dinner' ? 150 : 80;
+    
+    for (let i = 0; i < recipesPerCategory; i++) {
+      const recipeId = `${category.toLowerCase()}-${i + 1}`;
+      const ingredientCount = Math.floor(Math.random() * 8) + 5;
+      const instructionCount = Math.floor(Math.random() * 6) + 3;
+      
+      const recipe: Recipe = {
+        id: recipeId,
+        title: `${category} Recipe ${i + 1}`,
+        image: `https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 200000000)}?w=400&h=300&fit=crop`,
+        cookTime: `${Math.floor(Math.random() * 120) + 15} mins`,
+        servings: Math.floor(Math.random() * 6) + 2,
+        rating: parseFloat((Math.random() * 2 + 3).toFixed(1)),
+        category,
+        difficulty: difficulties[Math.floor(Math.random() * difficulties.length)],
+        ingredients: generateUniqueIngredients(category, ingredientCount),
+        instructions: Array.from({ length: instructionCount }, (_, stepIndex) => ({
+          id: `inst-${recipeId}-${stepIndex}`,
+          step: stepIndex + 1,
+          description: `Step ${stepIndex + 1}: Complete this cooking step for ${category.toLowerCase()}.`
+        }))
+      };
+      
+      recipes.push(recipe);
+    }
+  });
+  
+  return recipes;
 };
 
 export const useRecipeStore = create<RecipeStore>((set, get) => ({
-  recipes: initialRecipes,
+  recipes: initialRecipes.concat(generateUniqueRecipes()),
   user: initialUser,
   shoppingListItems: initialShoppingList,
   currentPage: 1,
-  recipesPerPage: 8,
+  recipesPerPage: 24,
   searchQuery: '',
   selectedCategory: 'All',
   sortBy: 'rating',
@@ -447,7 +485,7 @@ export const useRecipeStore = create<RecipeStore>((set, get) => ({
   setSelectedCategory: (category) => set({ selectedCategory: category }),
   setSortBy: (sortBy) => set({ sortBy: sortBy }),
   initializeRecipes: () => {
-    const generatedRecipes = generateRecipes();
+    const generatedRecipes = generateUniqueRecipes();
     const uniqueRecipes: Recipe[] = [];
     let duplicateCount = 0;
     
