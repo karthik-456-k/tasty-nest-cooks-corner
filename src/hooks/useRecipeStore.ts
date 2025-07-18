@@ -302,23 +302,43 @@ interface RecipeStore {
   sortBy: 'rating' | 'time' | 'difficulty';
   duplicatesRemoved: number;
   
+  // Recipe management
   addRecipe: (recipe: Recipe) => void;
   updateRecipe: (recipe: Recipe) => void;
   deleteRecipe: (recipeId: string) => void;
+  getRecipeById: (id: string) => Recipe | undefined;
+  getRandomRecipe: () => Recipe | undefined;
   
+  // User management
   updateUser: (userData: Partial<User>) => void;
   
+  // Shopping list management
   addShoppingListItem: (item: ShoppingListItem) => void;
   updateShoppingListItem: (itemId: string, updates: Partial<ShoppingListItem>) => void;
   deleteShoppingListItem: (itemId: string) => void;
+  addToShoppingList: (recipe: Recipe) => void;
+  shoppingList: ShoppingListItem[];
+  toggleShoppingListItem: (itemId: string) => void;
+  clearShoppingList: () => void;
   
+  // Favorites
   toggleFavorite: (recipeId: string) => void;
   
+  // Filtering and pagination
   setCurrentPage: (page: number) => void;
   setRecipesPerPage: (perPage: number) => void;
   setSearchQuery: (query: string) => void;
   setSelectedCategory: (category: string) => void;
   setSortBy: (sortBy: 'rating' | 'time' | 'difficulty') => void;
+  setSearch: (query: string) => void;
+  setCategory: (category: string) => void;
+  
+  // Computed properties
+  totalRecipes: number;
+  filteredCount: number;
+  totalPages: number;
+  
+  // Initialization
   initializeRecipes: () => void;
 }
 
@@ -446,18 +466,50 @@ export const useRecipeStore = create<RecipeStore>((set, get) => ({
   sortBy: 'rating',
   duplicatesRemoved: 0,
   
-  addRecipe: (recipe) => set(state => ({ recipes: [...state.recipes, recipe] })),
+  // Computed properties
+  get totalRecipes() {
+    return get().recipes.length;
+  },
+  get filteredCount() {
+    const { recipes, searchQuery, selectedCategory } = get();
+    return recipes.filter(recipe => {
+      const matchesSearch = recipe.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = selectedCategory === 'All' || recipe.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    }).length;
+  },
+  get totalPages() {
+    const { filteredCount, recipesPerPage } = get();
+    return Math.ceil(filteredCount / recipesPerPage);
+  },
+  get shoppingList() {
+    return get().shoppingListItems;
+  },
+  
+  // Recipe management
+  addRecipe: (recipe) => set(state => ({ 
+    recipes: [...state.recipes, { ...recipe, id: `recipe-${Date.now()}` }] 
+  })),
   updateRecipe: (recipe) => set(state => ({
     recipes: state.recipes.map(r => r.id === recipe.id ? recipe : r)
   })),
   deleteRecipe: (recipeId) => set(state => ({
     recipes: state.recipes.filter(r => r.id !== recipeId)
   })),
+  getRecipeById: (id) => {
+    return get().recipes.find(recipe => recipe.id === id);
+  },
+  getRandomRecipe: () => {
+    const recipes = get().recipes;
+    return recipes[Math.floor(Math.random() * recipes.length)];
+  },
   
+  // User management
   updateUser: (userData) => set(state => ({
     user: { ...state.user, ...userData }
   })),
   
+  // Shopping list management
   addShoppingListItem: (item) => set(state => ({
     shoppingListItems: [...state.shoppingListItems, item]
   })),
@@ -469,7 +521,28 @@ export const useRecipeStore = create<RecipeStore>((set, get) => ({
   deleteShoppingListItem: (itemId) => set(state => ({
     shoppingListItems: state.shoppingListItems.filter(item => item.id !== itemId)
   })),
+  addToShoppingList: (recipe) => set(state => {
+    const newItems = recipe.ingredients.map(ingredient => ({
+      id: `sli-${Date.now()}-${ingredient.id}`,
+      name: ingredient.name,
+      amount: ingredient.amount,
+      unit: ingredient.unit,
+      checked: false,
+      recipeId: recipe.id,
+      recipeName: recipe.title
+    }));
+    return {
+      shoppingListItems: [...state.shoppingListItems, ...newItems]
+    };
+  }),
+  toggleShoppingListItem: (itemId) => set(state => ({
+    shoppingListItems: state.shoppingListItems.map(item =>
+      item.id === itemId ? { ...item, checked: !item.checked } : item
+    )
+  })),
+  clearShoppingList: () => set({ shoppingListItems: [] }),
   
+  // Favorites
   toggleFavorite: (recipeId) => set(state => ({
     user: {
       ...state.user,
@@ -479,11 +552,16 @@ export const useRecipeStore = create<RecipeStore>((set, get) => ({
     }
   })),
   
+  // Filtering and pagination
   setCurrentPage: (page) => set({ currentPage: page }),
   setRecipesPerPage: (perPage) => set({ recipesPerPage: perPage }),
   setSearchQuery: (query) => set({ searchQuery: query }),
   setSelectedCategory: (category) => set({ selectedCategory: category }),
   setSortBy: (sortBy) => set({ sortBy: sortBy }),
+  setSearch: (query) => set({ searchQuery: query }),
+  setCategory: (category) => set({ selectedCategory: category }),
+  
+  // Initialization
   initializeRecipes: () => {
     const generatedRecipes = generateUniqueRecipes();
     const uniqueRecipes: Recipe[] = [];
