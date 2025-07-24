@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Recipe, User, ShoppingListItem } from '@/types/recipe';
+import { Recipe, RecipeInput, User, ShoppingListItem } from '@/types/recipe';
 
 const initialRecipes: Recipe[] = [
   {
@@ -303,7 +303,7 @@ interface RecipeStore {
   duplicatesRemoved: number;
   
   // Recipe management
-  addRecipe: (recipe: Recipe) => void;
+  addRecipe: (recipe: RecipeInput) => void;
   updateRecipe: (recipe: Recipe) => void;
   deleteRecipe: (recipeId: string) => void;
   getRecipeById: (id: string) => Recipe | undefined;

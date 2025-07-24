@@ -6,13 +6,15 @@ export interface Recipe {
   cookTime: string;
   servings: number;
   rating: number;
-  category: 'Breakfast' | 'Lunch' | 'Dinner' | 'Desserts' | 'Snacks' | 'Drinks';
+  category: 'Breakfast' | 'Lunch' | 'Dinner' | 'Desserts' | 'Snacks' | 'Drinks' | 'Vegan' | 'Kids' | 'Quick Meals';
   difficulty: 'Easy' | 'Medium' | 'Hard';
   ingredients: Ingredient[];
   instructions: Instruction[];
   authorId?: string;
   createdAt?: Date;
 }
+
+export type RecipeInput = Omit<Recipe, 'id'>;
 
 export interface Ingredient {
   id: string;
