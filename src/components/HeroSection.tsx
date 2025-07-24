@@ -38,8 +38,10 @@ const HeroSection = () => {
                 Explore Recipes
               </Link>
             </Button>
-            <Button variant="outline" size="lg" className="border-2 border-peach-300 text-peach-600 hover:bg-peach-50 px-8 py-3 rounded-full font-semibold">
-              Create Recipe
+            <Button asChild variant="outline" size="lg" className="border-2 border-peach-300 text-peach-600 hover:bg-peach-50 px-8 py-3 rounded-full font-semibold">
+              <Link to="/create">
+                Create Recipe
+              </Link>
             </Button>
           </div>
 

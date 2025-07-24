@@ -143,6 +143,7 @@ const RecipeDetails = () => {
               </Button>
               <Button
                 variant="outline"
+                onClick={() => navigate(`/cooking/${recipe.id}`)}
                 className="border-peach-300 text-peach-600 hover:bg-peach-50 flex-1"
               >
                 <ChefHat className="w-4 h-4 mr-2" />
